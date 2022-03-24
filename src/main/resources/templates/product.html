@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>상품</title>
+</head>
+<body>
+<h3>작성</h3>
+<form>
+  <input class="product-pid" type="hidden">
+
+  <div>
+    상품조회 : <input class="searchId" type="text">
+    <button type="button" id="searchBtn">조회</button>
+  </div>
+  <hr>
+  <div>
+  상 품 명 : <input class="product-pname" type="text"><br>
+  상품수량 : <input class="product-pquantity" type="text"><br>
+  상품가격 : <input class="product-pprice" type="text"><br>
+  <button type="button" id="saveBtn">등록</button>
+  </div>
+  <hr>
+</form>
+<h3>목록</h3>
+<table class="list">
+  <tr>
+    <th>id</th>
+    <th>상품명</th>
+    <th>상품수량</th>
+    <th>상품가격</th>
+    <th>삭제</th>
+  </tr>
+</table>
+  <script>
+    listBtn_f();
+
+    //등록&수정 버튼
+    saveBtn.addEventListener('click', e=>{
+      console.log("버튼 클릭");
+      if(e.target.textContent === '등록'){
+        saveBtn_f();
+      }else if(e.target.textContent === '수정'){
+        updateBtn_f();
+      }
+    });
+
+    //조회 버튼
+    searchBtn.addEventListener('click', e=>{
+      searchBtn_f(document.querySelector('.searchId').value);
+    });
+
+    //삭제 버튼
+    const $list = document.querySelector('.list');
+    $list.addEventListener('click', e=>{
+      if(e.target.textContent === '삭제'){
+        delBtn_f(e.target.dataset.id);
+      }
+    })
+
+    //등록
+    function saveBtn_f(e){
+      console.log("saveBtn_f()호출");
+
+      const data = {
+        "pname": document.querySelector('.product-pname').value,
+        "pquantity": document.querySelector('.product-pquantity').value,
+        "pprice": document.querySelector('.product-pprice').value
+      };
+      console.log(data);
+
+      fetch('/product/api',{
+        method:'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      })
+      .then(res=>res.json())
+      .then(res=>{
+        console.log(res);
+        document.querySelector('.product-pname').value = null;
+        document.querySelector('.product-pquantity').value = null;
+        document.querySelector('.product-pprice').value = null;
+        listBtn_f();
+      })
+      .catch(err=>console.log(err));}
+
+    //전체조회
+    function listBtn_f(e){
+      fetch('/product/api',{
+        method:'GET',
+      })
+      .then(res => res.json())
+      .then(res => {
+        console.log(res);
+        displayItem(res.data);
+      })
+      .catch(err=>{console.error('Err:',err)});
+    }
+
+    //목록 출력
+    function displayItem(data){
+      console.log(data);
+
+      const header =
+        `<tr>
+          <th>id</th>
+          <th>상품명</th>
+          <th>상품수량</th>
+          <th>상품가격</th>
+          <th>삭제</th>
+        </tr>`;
+
+      let body = ``;  
+      data.forEach(item => {
+        body += 
+          `<tr>
+            <td>${item.pid}</td>
+            <td>${item.pname}</td>
+            <td>${item.pquantity}</td>
+            <td>${item.pprice}</td>
+            <td>
+              <button class="delBtn" data-id="${item.pid}">삭제</button>
+<!--              <button class="updateBtn" data-id="${item.pid}">수정</button>-->
+            </td>
+          <tr>`;
+          
+      });
+
+      console.log($list);
+      console.log(header + body);
+      $list.innerHTML = header + body;
+    }
+
+    //조회
+    function searchBtn_f(pid){
+      const url = `/product/api/${pid}`;
+      fetch(url,{
+        method:'GET'
+      })
+      .then(res=>res.json())
+      .then(res=>{
+        if(res.rtcd == '00'){
+          console.log(res.data);
+          const item = res.data;
+          document.querySelector('.product-pid').value = item.pid;
+          document.querySelector('.product-pname').value = item.pname;
+          document.querySelector('.product-pquantity').value = item.pquantity;
+          document.querySelector('.product-pprice').value = item.pprice;
+          saveBtn.textContent = '수정';
+        }else{
+          console.log(res.rtmsg);
+        }
+      })
+      .catch(err=>console.log(err));
+    }
+
+    //삭제
+    function delBtn_f(pid){
+
+      if(!confirm('삭제하시겠습니까?')) return;
+
+      const url = `/product/api/${pid}`;
+      fetch(url,{
+        method:'DELETE'
+      }).then(res=>res.json())
+        .then(res=>{
+          if(res.rtcd == '00'){
+            listBtn_f();
+          }else{
+            console.log(res.rtmsg);
+          }
+        })
+        .catch(err=>console.log(err));
+    }
+
+    //수정
+    function updateBtn_f(e){
+      console.log("updateBtn_f()호출");
+
+      const data = {
+        "pname": document.querySelector('.product-pname').value,
+        "pquantity": document.querySelector('.product-pquantity').value,
+        "pprice": document.querySelector('.product-pprice').value
+      };
+      console.log(data);
+      const pid = document.querySelector('.product-pid').value;
+      console.log(pid);
+
+      const url = `/product/api/${pid}`;
+      fetch(url,{
+        method:'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      }).then(res=>res.json())
+        .then(res=>{
+          console.log(res);
+          document.querySelector('.product-pid').value = null;
+          document.querySelector('.product-pname').value = null;
+          document.querySelector('.product-pquantity').value = null;
+          document.querySelector('.product-pprice').value = null;
+          document.getElementById('saveBtn').textContent = '등록';
+          listBtn_f();
+        })
+        .catch(err=>console.log(err));
+    }
+  </script>
+</body>
+</html>
